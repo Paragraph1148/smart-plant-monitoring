@@ -1,17 +1,13 @@
-import { useState } from "react";
+// src/App.jsx
 import "./App.css";
 import Scene from "./components/three/Scene";
 import DataPanel from "./components/ui/DataPanel";
 import ControlPanel from "./components/ui/ControlPanel";
 import MoistureChart from "./components/charts/MoistureChart";
+import { usePlantData } from "./hooks/usePlantData";
 
 function App() {
-  const [plantData, setPlantData] = useState({
-    moisture: 65,
-    temperature: 22,
-    pumpStatus: false,
-    lastWatered: "2 hours ago",
-  });
+  const { plantData, togglePump, setAutoMode } = usePlantData();
 
   return (
     <div className="app-container">
@@ -23,6 +19,11 @@ function App() {
             className={`status ${plantData.pumpStatus ? "watering" : "idle"}`}
           >
             {plantData.pumpStatus ? "WATERING" : "IDLE"}
+          </span>
+          <span
+            className={`status ${plantData.isAutoMode ? "auto" : "manual"}`}
+          >
+            {plantData.isAutoMode ? "AUTO" : "MANUAL"}
           </span>
         </div>
       </header>
@@ -37,8 +38,13 @@ function App() {
         {/* Data & Controls Section */}
         <div className="data-panel">
           <DataPanel plantData={plantData} />
+          {/* <MoistureChart data={plantData.historicalData} /> */}
           <MoistureChart />
-          <ControlPanel plantData={plantData} setPlantData={setPlantData} />
+          <ControlPanel
+            plantData={plantData}
+            togglePump={togglePump}
+            setAutoMode={setAutoMode}
+          />
         </div>
       </div>
     </div>

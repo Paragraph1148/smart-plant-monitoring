@@ -1,9 +1,10 @@
-export default function ControlPanel({ plantData, setPlantData }) {
-  const togglePump = () => {
-    setPlantData((prev) => ({
-      ...prev,
-      pumpStatus: !prev.pumpStatus,
-    }));
+export default function ControlPanel({ plantData, togglePump, setAutoMode }) {
+  const handleModeChange = (isAuto) => {
+    setAutoMode(isAuto);
+    // If switching to auto mode and moisture is low, auto-start pump
+    if (isAuto && plantData.moisture < 30 && !plantData.pumpStatus) {
+      togglePump();
+    }
   };
 
   return (
@@ -14,17 +15,29 @@ export default function ControlPanel({ plantData, setPlantData }) {
         <button
           className={`control-btn ${plantData.pumpStatus ? "active" : ""}`}
           onClick={togglePump}
+          disabled={plantData.isAutoMode && plantData.moisture >= 85}
         >
           {plantData.pumpStatus ? "🛑 Stop Pump" : "💧 Start Pump"}
+          {plantData.isAutoMode && plantData.moisture >= 85 && " (Auto)"}
         </button>
 
         <div className="mode-selector">
           <label>
-            <input type="radio" name="mode" defaultChecked />
+            <input
+              type="radio"
+              name="mode"
+              checked={plantData.isAutoMode}
+              onChange={() => handleModeChange(true)}
+            />
             Auto Mode (AI)
           </label>
           <label>
-            <input type="radio" name="mode" />
+            <input
+              type="radio"
+              name="mode"
+              checked={!plantData.isAutoMode}
+              onChange={() => handleModeChange(false)}
+            />
             Manual Mode
           </label>
         </div>
