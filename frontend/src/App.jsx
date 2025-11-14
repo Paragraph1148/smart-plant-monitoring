@@ -4,7 +4,6 @@ import Scene from "./components/three/Scene";
 import DataPanel from "./components/ui/DataPanel";
 import ControlPanel from "./components/ui/ControlPanel";
 import MoistureChart from "./components/charts/MoistureChart";
-import { SpeedInsights } from "@vercel/speed-insights/react";
 
 function App() {
   const [plantData, setPlantData] = useState({
