@@ -1,3 +1,4 @@
+// src/components/ui/DataPanel.jsx
 export default function DataPanel({ plantData }) {
   const getMoistureStatus = (moisture) => {
     if (moisture > 60) return "Optimal";
@@ -26,10 +27,9 @@ export default function DataPanel({ plantData }) {
           >
             {plantData.moisture}%
           </span>
-
-          {/* fix bottom */}
-          {/* <span className="status">{getMoistureStatus(plantData.moisture)}</span> */}
-
+          <span className="status">
+            {getMoistureStatus(plantData.moisture)}
+          </span>
           <div className="progress-bar">
             <div
               className="progress-fill"

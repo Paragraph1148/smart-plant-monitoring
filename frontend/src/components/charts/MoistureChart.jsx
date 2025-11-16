@@ -26,67 +26,95 @@ Chart.register(
   Filler
 );
 
-const MoistureChart = ({ data = null }) => {
+const MoistureChart = ({ data = [] }) => {
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
   const [timeRange, setTimeRange] = useState("24h");
 
-  // Generate realistic simulated data if no data is provided
-  const generateMockData = () => {
-    const labels = [];
-    const moistureData = [];
-
-    let baseMoisture = 65;
+  // Function to generate time-based mock data when we don't have enough real data
+  const generateTimeBasedData = (hours) => {
+    const points = hours === "24h" ? 24 : 72;
+    const mockData = [];
     const now = new Date();
-
-    // Generate data points based on selected time range
-    let points = timeRange === "24h" ? 24 : 72;
-    let timeFormat = timeRange === "24h" ? "HH:00" : "MM/DD HH:00";
 
     for (let i = points - 1; i >= 0; i--) {
       const time = new Date(now);
-      if (timeRange === "24h") {
+
+      if (hours === "24h") {
         time.setHours(now.getHours() - i);
-        labels.push(
-          time.toLocaleTimeString("en-US", { hour: "2-digit", hour12: false })
-        );
       } else {
-        time.setHours(now.getHours() - i * 8);
-        labels.push(
-          time.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-          })
-        );
+        time.setHours(now.getHours() - i * 3); // For 72h, spread over 3 days
       }
 
-      // Simulate natural moisture decline with some randomness
-      baseMoisture -= Math.random() * 1.5;
+      const timeString =
+        hours === "24h"
+          ? time.toLocaleTimeString("en-US", { hour: "2-digit", hour12: false })
+          : time.toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+            });
 
-      // Simulate watering events when moisture gets too low
-      if (baseMoisture < 30 && Math.random() > 0.7) {
-        baseMoisture += 35 + Math.random() * 15;
+      // Generate realistic moisture data that decreases over time with some variation
+      let moisture;
+      if (i === 0) {
+        // Current time - use actual data if available, otherwise simulate
+        moisture =
+          data && data.length > 0 ? data[data.length - 1].moisture : 65;
+      } else {
+        // Historical data - simulate natural pattern
+        const baseMoisture = 65 - (i * (65 - 25)) / points;
+        moisture = Math.max(25, baseMoisture + (Math.random() * 10 - 5));
+
+        // Simulate watering events
+        if (moisture < 30 && Math.random() > 0.8) {
+          moisture += 30 + Math.random() * 20;
+        }
       }
 
-      // Keep within realistic bounds
-      baseMoisture = Math.max(20, Math.min(85, baseMoisture));
-      moistureData.push(Number(baseMoisture.toFixed(1)));
+      mockData.push({
+        time: timeString,
+        moisture: Number(moisture.toFixed(1)),
+        temperature: 20 + Math.random() * 10,
+        pumpActive: false,
+      });
     }
 
-    return { labels, datasets: [{ data: moistureData }] };
+    return mockData;
   };
 
-  const chartData = data || generateMockData();
+  // Transform data based on selected time range
+  const transformData = (rawData, range) => {
+    let displayData;
 
-  const chartConfig = {
-    type: "line",
-    data: {
-      labels: chartData.labels,
+    if (rawData && rawData.length > 0) {
+      // If we have real data, use it but limit based on time range
+      const maxPoints = range === "24h" ? 24 : 72;
+      displayData = rawData.slice(-maxPoints);
+
+      // If we don't have enough data points, supplement with mock data
+      if (displayData.length < maxPoints) {
+        const mockData = generateTimeBasedData(range);
+        // Replace the most recent points with actual data
+        const startIndex = mockData.length - displayData.length;
+        for (let i = 0; i < displayData.length; i++) {
+          if (startIndex + i < mockData.length) {
+            mockData[startIndex + i] = displayData[i];
+          }
+        }
+        displayData = mockData;
+      }
+    } else {
+      // No real data, generate mock data
+      displayData = generateTimeBasedData(range);
+    }
+
+    return {
+      labels: displayData.map((item) => item.time),
       datasets: [
         {
           label: "Soil Moisture %",
-          data: chartData.datasets[0].data,
+          data: displayData.map((item) => item.moisture),
           borderColor: "rgb(34, 197, 94)",
           backgroundColor: "rgba(34, 197, 94, 0.1)",
           borderWidth: 3,
@@ -99,7 +127,14 @@ const MoistureChart = ({ data = null }) => {
           pointHoverRadius: 6,
         },
       ],
-    },
+    };
+  };
+
+  const chartData = transformData(data, timeRange);
+
+  const chartConfig = {
+    type: "line",
+    data: chartData,
     options: {
       responsive: true,
       maintainAspectRatio: false,
@@ -133,7 +168,9 @@ const MoistureChart = ({ data = null }) => {
         },
         title: {
           display: true,
-          text: "Soil Moisture Levels",
+          text: `Soil Moisture Levels - ${
+            timeRange === "24h" ? "Last 24 Hours" : "Last 3 Days"
+          }`,
           color: "#f5f5f5",
           font: {
             size: 16,
@@ -148,7 +185,15 @@ const MoistureChart = ({ data = null }) => {
           },
           ticks: {
             color: "#a3a3a3",
-            maxTicksLimit: 8,
+            maxTicksLimit: timeRange === "24h" ? 8 : 12,
+            callback: function (value, index, values) {
+              // Show fewer labels for better readability
+              if (timeRange === "24h") {
+                return index % 3 === 0 ? this.getLabelForValue(value) : "";
+              } else {
+                return index % 6 === 0 ? this.getLabelForValue(value) : "";
+              }
+            },
           },
         },
         y: {

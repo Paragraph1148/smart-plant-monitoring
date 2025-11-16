@@ -7,7 +7,8 @@ import MoistureChart from "./components/charts/MoistureChart";
 import { usePlantData } from "./hooks/usePlantData";
 
 function App() {
-  const { plantData, togglePump, setAutoMode } = usePlantData();
+  const { plantData, togglePump, setAutoMode, toggleAI, loading } =
+    usePlantData();
 
   return (
     <div className="app-container">
@@ -25,6 +26,11 @@ function App() {
           >
             {plantData.isAutoMode ? "AUTO" : "MANUAL"}
           </span>
+          <span
+            className={`status ${plantData.aiEnabled ? "ai-on" : "ai-off"}`}
+          >
+            AI: {plantData.aiEnabled ? "ON" : "OFF"}
+          </span>
         </div>
       </header>
 
@@ -38,12 +44,13 @@ function App() {
         {/* Data & Controls Section */}
         <div className="data-panel">
           <DataPanel plantData={plantData} />
-          {/* <MoistureChart data={plantData.historicalData} /> */}
-          <MoistureChart />
+          <MoistureChart data={plantData.historicalData} />
           <ControlPanel
             plantData={plantData}
             togglePump={togglePump}
             setAutoMode={setAutoMode}
+            toggleAI={toggleAI}
+            loading={loading}
           />
         </div>
       </div>

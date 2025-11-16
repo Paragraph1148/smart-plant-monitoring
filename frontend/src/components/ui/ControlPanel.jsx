@@ -1,10 +1,13 @@
-export default function ControlPanel({ plantData, togglePump, setAutoMode }) {
+// src/components/ui/ControlPanel.jsx
+export default function ControlPanel({
+  plantData,
+  togglePump,
+  setAutoMode,
+  toggleAI,
+  loading,
+}) {
   const handleModeChange = (isAuto) => {
     setAutoMode(isAuto);
-    // If switching to auto mode and moisture is low, auto-start pump
-    if (isAuto && plantData.moisture < 30 && !plantData.pumpStatus) {
-      togglePump();
-    }
   };
 
   return (
@@ -15,7 +18,9 @@ export default function ControlPanel({ plantData, togglePump, setAutoMode }) {
         <button
           className={`control-btn ${plantData.pumpStatus ? "active" : ""}`}
           onClick={togglePump}
-          disabled={plantData.isAutoMode && plantData.moisture >= 85}
+          disabled={
+            loading || (plantData.isAutoMode && plantData.moisture >= 85)
+          }
         >
           {plantData.pumpStatus ? "🛑 Stop Pump" : "💧 Start Pump"}
           {plantData.isAutoMode && plantData.moisture >= 85 && " (Auto)"}
@@ -41,6 +46,29 @@ export default function ControlPanel({ plantData, togglePump, setAutoMode }) {
             Manual Mode
           </label>
         </div>
+
+        <button
+          className={`control-btn ${plantData.aiEnabled ? "ai-on" : "ai-off"}`}
+          onClick={toggleAI}
+        >
+          {plantData.aiEnabled ? "🤖 AI Enabled" : "❌ AI Disabled"}
+        </button>
+
+        {plantData.aiDecision && (
+          <div className="ai-info">
+            <h4>AI Decision</h4>
+            <p>
+              <strong>Action:</strong>{" "}
+              {plantData.aiDecision.shouldWater ? "WATER" : "HOLD"}
+            </p>
+            <p>
+              <strong>Confidence:</strong> {plantData.aiDecision.confidence}%
+            </p>
+            <p>
+              <strong>Reason:</strong> {plantData.aiDecision.reason}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

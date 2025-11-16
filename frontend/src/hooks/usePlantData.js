@@ -1,6 +1,7 @@
 // src/hooks/usePlantData.js
 import { useState, useEffect, useCallback } from "react";
 
+// For now, let's use the local simulation until the backend is ready
 export const usePlantData = () => {
   const [plantData, setPlantData] = useState({
     moisture: 65,
@@ -11,10 +12,19 @@ export const usePlantData = () => {
       minute: "2-digit",
     }),
     isAutoMode: true,
+    aiEnabled: true,
+    aiDecision: {
+      shouldWater: false,
+      confidence: 75,
+      reason: "Monitoring plant health",
+    },
+    timeSinceWatering: "2h",
     historicalData: [],
   });
 
-  // Generate initial historical data
+  const [loading, setLoading] = useState(false);
+
+  // Initialize historical data
   useEffect(() => {
     const initialData = [];
     const now = new Date();
@@ -27,7 +37,8 @@ export const usePlantData = () => {
           hour: "2-digit",
           minute: "2-digit",
         }),
-        moisture: Math.max(20, 65 - i * 1.5 + (Math.random() * 10 - 5)),
+        moisture: Math.max(25, 65 - i * 1.2 + (Math.random() * 8 - 4)),
+        temperature: 20 + Math.random() * 10,
         pumpActive: false,
       });
     }
@@ -35,18 +46,20 @@ export const usePlantData = () => {
     setPlantData((prev) => ({ ...prev, historicalData: initialData }));
   }, []);
 
-  // Natural moisture decrease simulation
+  // Natural environment simulation
   useEffect(() => {
     const interval = setInterval(() => {
       setPlantData((prev) => {
         // Only decrease moisture if pump is off and moisture is above 20%
         if (!prev.pumpStatus && prev.moisture > 20) {
-          const newMoisture = prev.moisture - Math.random() * 0.5;
-          const newTemp = 20 + Math.random() * 8; // Random temp between 20-28°C
+          const tempEffect = prev.temperature > 26 ? 1.5 : 1.0;
+          const moistureLoss = 0.3 * tempEffect + Math.random() * 0.4;
+          const newMoisture = prev.moisture - moistureLoss;
+          const newTemp = 20 + Math.random() * 12;
 
-          // Add to historical data (keep only last 24 points)
+          // Add to historical data
           const newHistorical = [...prev.historicalData];
-          if (newHistorical.length >= 24) {
+          if (newHistorical.length >= 50) {
             newHistorical.shift();
           }
           newHistorical.push({
@@ -54,36 +67,49 @@ export const usePlantData = () => {
               hour: "2-digit",
               minute: "2-digit",
             }),
-            moisture: newMoisture,
+            moisture: Math.round(newMoisture * 10) / 10,
+            temperature: Math.round(newTemp * 10) / 10,
             pumpActive: false,
           });
 
+          // Simple AI decision simulation
+          const shouldWater = newMoisture < 35;
+          const confidence = Math.round(Math.max(30, 100 - newMoisture * 1.5));
+          const reason = shouldWater
+            ? "Soil moisture below optimal level"
+            : "Moisture levels adequate";
+
           return {
             ...prev,
-            moisture: Number(newMoisture.toFixed(1)),
-            temperature: Number(newTemp.toFixed(1)),
+            moisture: Math.round(Math.max(20, newMoisture) * 10) / 10,
+            temperature: Math.round(newTemp * 10) / 10,
             historicalData: newHistorical,
+            aiDecision: {
+              shouldWater,
+              confidence,
+              reason,
+            },
           };
         }
         return prev;
       });
-    }, 3000); // Update every 3 seconds
+    }, 3000);
 
     return () => clearInterval(interval);
   }, []);
 
-  // Pump effect - increase moisture when pump is on
+  // Pump effect
   useEffect(() => {
     if (!plantData.pumpStatus) return;
 
     const pumpInterval = setInterval(() => {
       setPlantData((prev) => {
         if (prev.pumpStatus && prev.moisture < 85) {
-          const newMoisture = prev.moisture + 8; // Fast increase when pumping
+          const newMoisture = prev.moisture + 8;
 
-          // Update historical data with pump activity
+          // Update historical data
           const newHistorical = [...prev.historicalData];
-          if (newHistorical.length >= 24) {
+          if (newHistorical.length >= 50) {
             newHistorical.shift();
           }
           newHistorical.push({
@@ -91,17 +117,18 @@ export const usePlantData = () => {
               hour: "2-digit",
               minute: "2-digit",
             }),
-            moisture: newMoisture,
+            moisture: Math.round(newMoisture * 10) / 10,
+            temperature: prev.temperature,
             pumpActive: true,
           });
 
           return {
             ...prev,
-            moisture: Number(newMoisture.toFixed(1)),
+            moisture: Math.round(Math.min(85, newMoisture) * 10) / 10,
             historicalData: newHistorical,
           };
         } else if (prev.moisture >= 85) {
-          // Auto turn off pump when target reached
+          // Auto turn off pump
           return {
             ...prev,
             pumpStatus: false,
@@ -109,7 +136,7 @@ export const usePlantData = () => {
         }
         return prev;
       });
-    }, 1000); // Fast updates when pumping
+    }, 1000);
 
     return () => clearInterval(pumpInterval);
   }, [plantData.pumpStatus]);
@@ -119,7 +146,7 @@ export const usePlantData = () => {
       const newPumpStatus = !prev.pumpStatus;
 
       if (newPumpStatus) {
-        // When turning pump ON, update last watered time
+        // When turning pump ON
         return {
           ...prev,
           pumpStatus: newPumpStatus,
@@ -130,7 +157,6 @@ export const usePlantData = () => {
         };
       }
 
-      // When turning pump OFF
       return {
         ...prev,
         pumpStatus: newPumpStatus,
@@ -145,9 +171,18 @@ export const usePlantData = () => {
     }));
   }, []);
 
+  const toggleAI = useCallback(() => {
+    setPlantData((prev) => ({
+      ...prev,
+      aiEnabled: !prev.aiEnabled,
+    }));
+  }, []);
+
   return {
     plantData,
     togglePump,
     setAutoMode,
+    toggleAI,
+    loading,
   };
 };
