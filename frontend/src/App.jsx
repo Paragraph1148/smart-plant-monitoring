@@ -41,17 +41,26 @@ function App() {
           <Scene plantData={plantData} />
         </div>
 
-        {/* Data & Controls Section */}
+        {/* Data & Controls Section - Now Scrollable */}
         <div className="data-panel">
-          <DataPanel plantData={plantData} />
+          {/* Data Panel with proper spacing */}
+          <div className="data-panel-component">
+            <DataPanel plantData={plantData} />
+          </div>
+
+          {/* Moisture Chart with fixed height */}
           <MoistureChart data={plantData.historicalData} />
-          <ControlPanel
-            plantData={plantData}
-            togglePump={togglePump}
-            setAutoMode={setAutoMode}
-            toggleAI={toggleAI}
-            loading={loading}
-          />
+
+          {/* Control Panel with proper spacing */}
+          <div className="control-panel">
+            <ControlPanel
+              plantData={plantData}
+              togglePump={togglePump}
+              setAutoMode={setAutoMode}
+              toggleAI={toggleAI}
+              loading={loading}
+            />
+          </div>
         </div>
       </div>
     </div>
